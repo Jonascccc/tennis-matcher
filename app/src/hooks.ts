@@ -10,6 +10,13 @@ export function useLogin() {
     onSuccess: async (token) => { await api.setToken(token); qc.clear(); },
   });
 }
+export function useLoginGoogle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (idToken: string) => api.loginGoogle(idToken),
+    onSuccess: async (token) => { await api.setToken(token); qc.clear(); },
+  });
+}
 export function useRegister() {
   const qc = useQueryClient();
   return useMutation({

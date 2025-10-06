@@ -25,6 +25,13 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "GOOGLE_EXPO_CLIENT_ID": "232154424565-14o9qopsa0ajbn9qnb1j0h99j11gasa4.apps.googleusercontent.com",
+      "API_BASE": "http://192.168.0.15:8080/api"
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

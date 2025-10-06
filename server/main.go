@@ -27,6 +27,7 @@ func main() {
 
 	api.POST("/auth/register", func(c *gin.Context) { middleware.Register(c, jwtSecret) })
 	api.POST("/auth/login", func(c *gin.Context) { middleware.Login(c, jwtSecret) })
+	api.POST("/auth/google", func(c *gin.Context) { middleware.GoogleLogin(c, jwtSecret, config.C.GoogleClientID) })
 
 	authed := api.Group("")
 	authed.Use(middleware.Auth(jwtSecret))

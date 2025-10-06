@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Jonascccc/tennis-matcher/server/db"
+	"google.golang.org/api/idtoken"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -107,4 +109,51 @@ func Login(c *gin.Context, jwtSecret []byte) {
 	}
 	tok, _ := jwtNew(uid, jwtSecret)
 	c.JSON(200, gin.H{"token": tok})
+}
+
+func GoogleLogin(c *gin.Context, jwtSecret []byte, googleClientID string) {
+	var in struct {
+		IDToken string `json:"idToken"`
+	}
+	if err := c.ShouldBindJSON(&in); err != nil || strings.TrimSpace(in.IDToken) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idToken required"})
+		return
+	}
+
+	// Verify ID token with Google
+	ctx := context.Background()
+	payload, err := idtoken.Validate(ctx, in.IDToken, googleClientID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid id_token"})
+		return
+	}
+
+	emailAny := payload.Claims["email"]
+	email, _ := emailAny.(string)
+	if strings.TrimSpace(email) == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "email not present"})
+		return
+	}
+
+	// Find or create user
+	var uid int
+	err = db.Pool.QueryRow(c, `SELECT user_id FROM app_user WHERE email=$1`, email).Scan(&uid)
+	if err == pgx.ErrNoRows {
+		err = db.Pool.QueryRow(c,
+			`INSERT INTO app_user(email,password_hash) VALUES($1,$2) RETURNING user_id`,
+			email, "google-oauth",
+		).Scan(&uid)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "create user failed"})
+			return
+		}
+		_, _ = db.Pool.Exec(c, `INSERT INTO tennis_profile(user_id) VALUES($1)`, uid)
+	} else if err != nil {
+		log.Println("db err:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+
+	tok, _ := jwtNew(uid, jwtSecret)
+	c.JSON(http.StatusOK, gin.H{"token": tok})
 }

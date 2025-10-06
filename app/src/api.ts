@@ -82,6 +82,10 @@ export async function login(email: string, password: string) {
   const { data } = await api.post<{ token: string }>("/auth/login", { email, password });
   return data.token;
 }
+export async function loginGoogle(idToken: string) {
+  const { data } = await api.post<{ token: string }>("/auth/google", { idToken });
+  return data.token;
+}
 export async function getProfile() {
   const { data } = await api.get<Profile>("/me/profile");
   return data;
